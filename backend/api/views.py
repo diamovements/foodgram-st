@@ -120,7 +120,7 @@ class UserViewSet(viewsets.ModelViewSet):
             user.subscriptions.add(author)
             serializer = UserRecipesSerializer(author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
+        except Exception:
             return Response(
                 {'detail': _('Произошла ошибка при подписке')},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -143,7 +143,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 {'detail': _('Вы отписались от {}').format(author.username)},
                 status=status.HTTP_204_NO_CONTENT,
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {'detail': _('Произошла ошибка при отписке')},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
