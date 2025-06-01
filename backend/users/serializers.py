@@ -1,64 +1,73 @@
-from django.contrib.auth.password_validation import validate_password
-from django.utils.translation import gettext_lazy as _
-from drf_extra_fields.fields import Base64ImageField
+from django.contrib.auth import get_user_model
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
-from .models import User
+
+from foodgram.serializers import RecipeMinifiedSerializer
+from foodgram.fields import Base64ImageField
+
+User = get_user_model()
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели пользователя."""
-    
+class CustomUserCreateSerializer(UserCreateSerializer):
+    class Meta:
+        model = User
+        fields = ("email", "id", "username", "first_name", "last_name", "password")
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "email": {"required": True},
+            "first_name": {"required": True},
+            "last_name": {"required": True},
+        }
+
+
+class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64ImageField(use_url=True)
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = (
-            'id',
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'avatar',
-        )
+        fields = ("email", "id", "username", "first_name", "last_name", "is_subscribed", "avatar")
 
-    def get_is_subscribed(self, obj: User) -> bool:
-        """Проверяет, подписан ли текущий пользователь на данного пользователя."""
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return request.user in obj.subscribers.all()
-        return False
+    def get_is_subscribed(self, obj):
+        user = self.context.get("request").user
+        if user.is_anonymous:
+            return False
+        return user.follower.filter(author=obj).exists()
+
+    def get_avatar(self, obj):
+        if obj.avatar:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.avatar.url)
+        return None
 
 
-class UserResponseOnCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для ответа при создании пользователя."""
-    
+class SubscribeSerializer(CustomUserSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta(CustomUserSerializer.Meta):
+        fields = CustomUserSerializer.Meta.fields + ("recipes", "recipes_count")
+
+    def get_recipes(self, obj):
+        request = self.context.get("request")
+        recipes = obj.recipes.all()
+        recipes_limit = request.query_params.get("recipes_limit")
+        if recipes_limit:
+            recipes = recipes[: int(recipes_limit)]
+        return RecipeMinifiedSerializer(recipes, many=True, context={"request": request}).data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(required=True)
+    current_password = serializers.CharField(required=True)
+
+
+class SetAvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField()
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'first_name', 'last_name')
-
-
-class CreatePasswordSerializer(serializers.Serializer):
-    """Сериализатор для изменения пароля."""
-    
-    current_password = serializers.CharField()
-    new_password = serializers.CharField(validators=[validate_password])
-
-
-class CreateAvatarSerializer(serializers.ModelSerializer):
-    """Сериализатор для обновления аватара пользователя."""
-    
-    avatar = Base64ImageField(use_url=True)
-
-    class Meta:
-        model = User
-        fields = ('avatar',)
-
-    def validate(self, data: dict) -> dict:
-        """Проверяет, что аватар не пустой."""
-        avatar = self.initial_data.get('avatar')
-        if not avatar:
-            raise serializers.ValidationError(_('Фото не должно быть пустым'))
-        return data
-
+        fields = ("avatar",)

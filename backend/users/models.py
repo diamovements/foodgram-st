@@ -1,57 +1,43 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import RegexValidator
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 
-class User(AbstractUser):
-    """Модель пользователя."""
-    
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+class CustomUser(AbstractUser):
+    email = models.EmailField(unique=True)
+    avatar = models.ImageField(upload_to="users/avatars/", blank=True, null=True)
 
-    email = models.EmailField(
-        verbose_name=_('Электронная почта'),
-        max_length=254,
-        unique=True,
-    )
-    username = models.CharField(
-        verbose_name=_('Имя пользователя'),
-        max_length=50,
-        unique=True,
-        db_index=True,
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=_('Имя пользователя может содержать только буквы, цифры и символы @/./+/-/_')
-            )
-        ],
-    )
-    first_name = models.CharField(
-        verbose_name=_('Имя'),
-        max_length=50,
-    )
-    last_name = models.CharField(
-        verbose_name=_('Фамилия'),
-        max_length=50,
-    )
-    avatar = models.ImageField(
-        verbose_name=_('Аватар пользователя'),
-        upload_to='users/avatars/',
+    groups = models.ManyToManyField(
+        "auth.Group",
+        verbose_name="groups",
         blank=True,
+        help_text="Группы пользователя",
+        related_name="customuser_groups",
+        related_query_name="user",
     )
-    subscriptions = models.ManyToManyField(
-        'self',
-        symmetrical=False,
-        related_name='subscribers',
+    user_permissions = models.ManyToManyField(
+        "auth.Permission",
+        verbose_name="user permissions",
         blank=True,
-        verbose_name=_('Подписки'),
+        help_text="Права пользователя",
+        related_name="customuser_user_permissions",
+        related_query_name="user",
     )
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username", "first_name", "last_name"]
+
+    def __str__(self):
+        return self.email
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="follower", verbose_name="Подписчик")
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="following", verbose_name="Автор")
 
     class Meta:
-        verbose_name = _('Пользователь')
-        verbose_name_plural = _('Пользователи')
-        ordering = ('username',)
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        constraints = [models.UniqueConstraint(fields=["user", "author"], name="unique_follow")]
 
-    def __str__(self) -> str:
-        return self.username
+    def __str__(self):
+        return f"{self.user} подписан на {self.author}"

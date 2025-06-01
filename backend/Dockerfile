@@ -1,14 +1,15 @@
-FROM python:3.9-slim
+FROM python:3.9
 
 WORKDIR /app
 
 COPY requirements.txt .
-
-RUN pip install --upgrade pip \
-     && pip install -r requirements.txt --no-cache-dir --default-timeout=100
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate \
-                   && python manage.py load_ingredients \
-                   && gunicorn main.wsgi:application --bind 0.0.0.0:8000"]
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=server.settings
+
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["gunicorn", "server.wsgi:application", "--bind", "0.0.0.0:8000"] 
