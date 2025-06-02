@@ -21,7 +21,8 @@ class Command(BaseCommand):
 
             for ingredient in ingredients:
                 Ingredient.objects.get_or_create(
-                    name=ingredient["name"], measurement_unit=ingredient["measurement_unit"]
+                    name=ingredient["name"],
+                    measurement_unit=ingredient["measurement_unit"],
                 )
 
             self.stdout.write(self.style.SUCCESS("Все ингредиенты загружены"))

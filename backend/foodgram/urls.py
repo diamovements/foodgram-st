@@ -11,5 +11,9 @@ router.register("recipes", RecipeViewSet, basename="recipes")
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("recipes/<int:pk>/get-link/", RecipeViewSet.as_view({"get": "get_link"}), name="recipe-get-link"),
+    path(
+        "recipes/<int:pk>/get-link/",
+        RecipeViewSet.as_view({"get": "get_link"}),
+        name="recipe-get-link",
+    ),
 ]

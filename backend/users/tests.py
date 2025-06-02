@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from foodgram.models import Recipe
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 User = get_user_model()
@@ -13,10 +14,22 @@ class UserAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
-            username="user1", email="email1@example.com", password="Pass123!@#", first_name="First", last_name="User"
+            username="user1",
+            email="email1@example.com",
+            password="Pass123!@#",
+            first_name="First",
+            last_name="User",
         )
         self.other_user = User.objects.create_user(
-            username="user2", email="email2@example.com", password="Pass456!@#", first_name="Second", last_name="User"
+            username="user2",
+            email="email2@example.com",
+            password="Pass456!@#",
+            first_name="Second",
+            last_name="User",
+        )
+        # Создаем тестовое изображение
+        self.test_image = SimpleUploadedFile(
+            name="test_image.jpg", content=b"", content_type="image/jpeg"
         )
 
     def test_register_user(self):
@@ -112,7 +125,8 @@ class UserAPITest(TestCase):
             author=self.other_user,
             name="Test Recipe",
             text="Test Description",
-            cooking_time=30
+            cooking_time=30,
+            image=self.test_image,
         )
         subscribe_url = reverse("users:users-subscribe", args=[self.other_user.id])
         self.client.post(subscribe_url)

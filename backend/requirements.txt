@@ -10,3 +10,4 @@ drf-extra-fields==3.5.0
 django-cors-headers==3.10.1
 social-auth-app-django==4.0.0
 flake8==7.0.0
+black==24.2.0
